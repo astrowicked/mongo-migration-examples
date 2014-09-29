@@ -1,0 +1,25 @@
+#Example or doing an RSYNC migration
+
+#Local hostname: foo.example.com
+#Remote hostname: bar.example.com
+#Mongo data dir: /data
+
+#First step is to stop mongo on both hosts
+#From within the mongo shell, with admin privileges you can run:
+use admin; db.shutdownServer(); 
+
+#or stopping the service
+
+$ service mongodb stop #this will vary on your distro, this is just an example
+
+#Now you can run the rsync from the local machine to the remote machine.
+
+$ rsync -avb /data user@bar.example.com:/data #using the archive flag to preserve permissions, users and groups
+
+#For speedier encrypted tranfer you cae use blowfish
+
+$ rsync -avb -e “ssh -c blowfish” /data user@bar.example.com:/data
+
+#Now you can bring up mongo on bar.example.com
+service mongodb start #this will vary on your distro, this is just an example
+

@@ -1,0 +1,351 @@
+#Example of ReplicaSet extension
+
+#iptables rules to allow access
+
+[root@mongodb-n0-rs1 ~]# iptables -L
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+ACCEPT     all  --  anywhere             anywhere             ctstate RELATED,ESTABLISHED
+ACCEPT     tcp  --  mongodb-n2-rs2       anywhere             tcp dpt:27017
+ACCEPT     tcp  --  mongodb-n1-rs2       anywhere             tcp dpt:27017
+ACCEPT     tcp  --  mongodb-n0-rs2       anywhere             tcp dpt:27017
+ACCEPT     tcp  --  mongodb-n0-rs1       anywhere             tcp dpt:27017
+ACCEPT     tcp  --  mongodb-n1-rs1       anywhere             tcp dpt:27017
+ACCEPT     tcp  --  mongodb-n2-rs1       anywhere             tcp dpt:27017
+
+#Entries in the host file
+
+10.208.231.72   mongodb-n0-rs1
+10.208.231.194  mongodb-n1-rs1
+10.208.231.218  mongodb-n2-rs1
+
+10.208.161.158  mongodb-n0-rs2
+10.208.166.50   mongodb-n1-rs2
+10.208.229.24   mongodb-n2-rs2
+
+#Source Replica Set status
+
+rs1:PRIMARY> rs.status()
+{
+    "set" : "rs1",
+    "date" : ISODate("2014-09-18T20:53:11Z"),
+    "myState" : 1,
+    "members" : [
+        {
+            "_id" : 0,
+            "name" : "mongodb-n0-rs1:27017",
+            "health" : 1,
+            "state" : 1,
+            "stateStr" : "PRIMARY",
+            "uptime" : 13450,
+            "optime" : Timestamp(1411062903, 9000),
+            "optimeDate" : ISODate("2014-09-18T17:55:03Z"),
+            "electionTime" : Timestamp(1411060185, 2),
+            "electionDate" : ISODate("2014-09-18T17:09:45Z"),
+            "self" : true
+        },
+        {
+            "_id" : 1,
+            "name" : "mongodb-n1-rs1:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 12856,
+            "optime" : Timestamp(1411062903, 9000),
+            "optimeDate" : ISODate("2014-09-18T17:55:03Z"),
+            "lastHeartbeat" : ISODate("2014-09-18T20:53:10Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-18T20:53:10Z"),
+            "pingMs" : 0,
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 2,
+            "name" : "mongodb-n2-rs1:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 12850,
+            "optime" : Timestamp(1411062903, 9000),
+            "optimeDate" : ISODate("2014-09-18T17:55:03Z"),
+            "lastHeartbeat" : ISODate("2014-09-18T20:53:10Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-18T20:53:11Z"),
+            "pingMs" : 0,
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        }
+    ],
+    "ok" : 1
+}
+
+#Source Replica Set config
+
+rs1:PRIMARY> rs.conf()
+{
+    "_id" : "rs1",
+    "version" : 3,
+    "members" : [
+        {
+            "_id" : 0,
+            "host" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 1,
+            "host" : "mongodb-n1-rs1:27017"
+        },
+        {
+            "_id" : 2,
+            "host" : "mongodb-n2-rs1:27017"
+        }
+    ]
+}
+
+#Add the nodes from the destination
+rs.add({'_id': 4, 'host': 'mongodb-n0-rs2:27017', 'priority': 0, 'hidden': true 'votes':0})
+rs.add({'_id': 5, 'host': 'mongodb-n1-rs2:27017', 'priority': 0, 'hidden': true 'votes':0})
+rs.add({'_id': 6, 'host': 'mongodb-n2-rs2:27017', 'priority': 0, 'hidden': true, 'votes':0})
+
+#ReplicaSet Status after the adds
+
+rs1:PRIMARY> rs.status()
+{
+    "set" : "rs1",
+    "date" : ISODate("2014-09-29T01:41:51Z"),
+    "myState" : 1,
+    "members" : [
+        {
+            "_id" : 0,
+            "name" : "mongodb-n0-rs1:27017",
+            "health" : 1,
+            "state" : 1,
+            "stateStr" : "PRIMARY",
+            "uptime" : 550,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "electionTime" : Timestamp(1411954876, 1),
+            "electionDate" : ISODate("2014-09-29T01:41:16Z"),
+            "self" : true
+        },
+        {
+            "_id" : 1,
+            "name" : "mongodb-n1-rs1:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 372,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:41:50Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:41:50Z"),
+            "pingMs" : 0,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 2,
+            "name" : "mongodb-n2-rs1:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 372,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:41:50Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:41:50Z"),
+            "pingMs" : 1,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 4,
+            "name" : "mongodb-n0-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 40,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:41:49Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:41:50Z"),
+            "pingMs" : 24,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 5,
+            "name" : "mongodb-n1-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 40,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:41:49Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:41:50Z"),
+            "pingMs" : 24,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 6,
+            "name" : "mongodb-n2-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 40,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:41:49Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:41:50Z"),
+            "pingMs" : 27,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        }
+    ],
+    "ok" : 1
+}
+
+#ReplicaSet config after the adds
+
+rs1:PRIMARY> rs.conf()
+{
+    "_id" : "rs1",
+    "version" : 6,
+    "members" : [
+        {
+            "_id" : 0,
+            "host" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 1,
+            "host" : "mongodb-n1-rs1:27017"
+        },
+        {
+            "_id" : 2,
+            "host" : "mongodb-n2-rs1:27017"
+        },
+        {
+            "_id" : 4,
+            "host" : "mongodb-n0-rs2:27017",
+            "priority" : 0,
+            "hidden" : true
+        },
+        {
+            "_id" : 5,
+            "host" : "mongodb-n1-rs2:27017",
+            "priority" : 0,
+            "hidden" : true
+        },
+        {
+            "_id" : 6,
+            "host" : "mongodb-n2-rs2:27017",
+            "priority" : 0,
+            "hidden" : true
+        }
+    ]
+}
+
+#When it time for cutover, shut down app. Then we will force an rs.reconfig() on the destination
+#This is the config we will use to reconfig and swtich the destination nodes to the only nodes in the set
+
+reconfig_doc = {
+    "_id" : "rs1",
+    "version" : 7,
+    "members" : [
+        {
+            "_id" : 4,
+            "host" : "mongodb-n0-rs2:27017",
+        },
+        {
+            "_id" : 5,
+            "host" : "mongodb-n1-rs2:27017",
+        },
+        {
+            "_id" : 6,
+            "host" : "mongodb-n2-rs2:27017",
+        }
+    ]
+}
+
+#Then issue the rs.reconfig
+
+rs.reconfig(reconfig_doc, {force:true})
+
+#Using {force: true} becasue Mongo will not let you reconfig on a Primary that will not be part of the set after the reconfig
+
+#ReplicaSet status after the reconfig
+
+rs1:PRIMARY> rs.status()
+{
+    "set" : "rs1",
+    "date" : ISODate("2014-09-29T01:52:37Z"),
+    "myState" : 1,
+    "members" : [
+        {
+            "_id" : 4,
+            "name" : "mongodb-n0-rs2:27017",
+            "health" : 1,
+            "state" : 1,
+            "stateStr" : "PRIMARY",
+            "uptime" : 709,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "electionTime" : Timestamp(1411955483, 1),
+            "electionDate" : ISODate("2014-09-29T01:51:23Z"),
+            "self" : true
+        },
+        {
+            "_id" : 5,
+            "name" : "mongodb-n1-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 80,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:52:37Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:52:36Z"),
+            "pingMs" : 0,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        },
+        {
+            "_id" : 6,
+            "name" : "mongodb-n2-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 80,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-29T01:52:37Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-29T01:52:37Z"),
+            "pingMs" : 0,
+            "lastHeartbeatMessage" : "syncing to: mongodb-n0-rs1:27017",
+            "syncingTo" : "mongodb-n0-rs1:27017"
+        }
+    ],
+    "ok" : 1
+}
+
+#ReplicaSet config after the reconfig
+
+{
+    "_id" : "rs1",
+    "version" : 13332,
+    "members" : [
+        {
+            "_id" : 4,
+            "host" : "mongodb-n0-rs2:27017"
+        },
+        {
+            "_id" : 5,
+            "host" : "mongodb-n1-rs2:27017"
+        },
+        {
+            "_id" : 6,
+            "host" : "mongodb-n2-rs2:27017"
+        }
+    ]
+}
+
+#Bring the app back up with the same replicaSet name but the new host in the seed list
+

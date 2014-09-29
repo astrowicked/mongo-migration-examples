@@ -1,0 +1,35 @@
+#Example of a mongodump/mongorestore migration
+
+#Source hostname: foo.example.com
+#Destination hostname: bar.example.com
+#Mongo data dir: /data
+
+#Stopping the application is a crucial first step or you could end up with variations in data on both sides
+#Mongo can be runnign during this process, we just want to stop operations
+#If you you stop mongo you can use --dbpath in the mongodump and it will backup straight from the data files
+#If the source server does not have enough storage to hold the backup you can use a backup host or another server with sufficient storage
+
+$ mongodump foo.example.com:27017 #If using auth you will need to use the --authenticationDatabase --user and --password flags
+
+#For the restore
+$ mongorestore bar.example.com:27017 dump/ #If using auth you will need to use the --authenticationDatabase --user and --password flags
+
+#If you would like to only move over one database you can use the --database flag
+
+$ mongodump foo.example.com:27017 --database mydb
+
+#You can use the collection flag along with --database for just moving a single collection
+
+$ mongodump foo.example.com:27017 --database mydb --collection mycollection
+
+#When restoring you will need to specify the directories for the DB or the file for the collection if you want to restore those singularly
+
+$ mongorestore bar.example.com:27017 --database yourdb dump/mydb/
+
+#Collection
+
+$ mongorestore bar.example.com:27017 --database yourdb --collection yourcollection dump/mydb/mycollection
+
+#If you notice I have change the namespaces on the restore, this is an effective method to rename databases as there is not option currently in the shell.
+
+#If mongo was running during the restore it's ready for you to access, if no then start it up and your data is ready.
