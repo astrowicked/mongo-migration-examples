@@ -1,1 +1,94 @@
 #Example of a Mongo2Toku sync
+
+#We need to get the rs.status() for the replicaSet were moving from
+
+{
+    "set" : "rs1",
+    "date" : ISODate("2014-09-30T05:05:40Z"),
+    "myState" : 1,
+    "members" : [
+        {
+            "_id" : 4,
+            "name" : "mongodb-n0-rs2:27017",
+            "health" : 1,
+            "state" : 1,
+            "stateStr" : "PRIMARY",
+            "uptime" : 98692,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "electionTime" : Timestamp(1411955483, 1),
+            "electionDate" : ISODate("2014-09-29T01:51:23Z"),
+            "self" : true
+        },
+        {
+            "_id" : 5,
+            "name" : "mongodb-n1-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 98063,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-30T05:05:40Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-30T05:05:40Z"),
+            "pingMs" : 0,
+            "syncingTo" : "mongodb-n0-rs2:27017"
+        },
+        {
+            "_id" : 6,
+            "name" : "mongodb-n2-rs2:27017",
+            "health" : 1,
+            "state" : 2,
+            "stateStr" : "SECONDARY",
+            "uptime" : 98063,
+            "optime" : Timestamp(1411574919, 1),
+            "optimeDate" : ISODate("2014-09-24T16:08:39Z"),
+            "lastHeartbeat" : ISODate("2014-09-30T05:05:38Z"),
+            "lastHeartbeatRecv" : ISODate("2014-09-30T05:05:38Z"),
+            "pingMs" : 0,
+            "syncingTo" : "mongodb-n0-rs2:27017"
+        }
+    ],
+    "ok" : 1
+}
+
+#We're mainly concerned with the optime, we will wnat to copy that and then take dump of the instance
+
+[root@mongodb-n0-rs2 ~]# mongodump localhost:27017 
+
+#Will look something like this
+
+connected to: 127.0.0.1
+2014-09-30T04:19:31.714+0000 all dbs
+2014-09-30T04:19:31.715+0000 DATABASE: users     to     dump/users
+2014-09-30T04:19:31.717+0000    users.system.indexes to dump/users/system.indexes.bson
+2014-09-30T04:19:31.718+0000         1 documents
+2014-09-30T04:19:31.718+0000    users.users to dump/users/users.bson
+2014-09-30T04:19:34.029+0000        Collection File Writing Progress: 1178300/12200000  9%  (documents)
+
+#Now we will restore the data to our destination, in this case an Object Rocket instance
+
+[root@mongodb-n0-rs2 ~]# mongorestore -h dfw-mongos0.objectrocket.com --port 17042 -d users -u usersync -p syncdemo14 dump/users/
+
+#It will look something like this
+
+connected to: dfw-mongos0.objectrocket.com:17042
+2014-09-30T04:26:10.190+0000 dump/users/users.bson
+2014-09-30T04:26:10.190+0000    going into namespace [users.users]
+2014-09-30T04:26:13.096+0000        Progress: 6251973/1824351429    0%  (bytes)
+
+#Now we will want to run our mongo2toku sync command with the optime from our rs.status() above
+#Note: the optime is fromed as seconds from the epoch, in this case 1411574919, then a colon and the op number we would like to start with for this time. I alwasy set this to 1 to start at the first op of the timestamp. Another thing that can be done is dial back the timestamp for eaxtra padding:
+#Example: 
+    #For an hour, subtract 3600 from the timestance, 1411574919 - 3600 = 1411571319
+    #For one day, subtract 86400 from the timetamp, 1411574919 - 86400 = 1411488519
+#Becautious when doing this, if you are limiting the oplog size (or even if you are not) be cognisant of how long your oplog is (in hours/minutes/seconds) before dialing back the optime to an earlier time.
+
+#Here is the command
+
+root@mongodb-n0-rs2 bin]# ./mongo2toku -h dfw-mongos0.objectrocket.com --port 17042 --authenticationDatabase users -u usersync -p syncdemo14 --from mongodb-n0-rs2:27017 --ts 1411574919:1
+
+#This is a sample of the output
+connected to: dfw-mongos0.objectrocket.com:17042
+Tue Sep 30 05:08:14.340 [mongo2toku] synced up to 1411574919:1 (Sep 24 16:08:39:1), source has up to 1412053694:1000 (Sep 30 05:08:14:3e8), 478775 seconds behind source.
+Tue Sep 30 05:08:24.556 [mongo2toku] synced up to 1412053704:2477 (Sep 30 05:08:24:9ad), source has up to 1412053704:2477 (Sep 30 05:08:24:9ad), fully synced.
