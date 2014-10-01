@@ -78,11 +78,11 @@ connected to: dfw-mongos0.objectrocket.com:17042
 2014-09-30T04:26:13.096+0000        Progress: 6251973/1824351429    0%  (bytes)
 
 #Now we will want to run our mongo2toku sync command with the optime from our rs.status() above
-#Note: the optime is fromed as seconds from the epoch, in this case 1411574919, then a colon and the op number we would like to start with for this time. I alwasy set this to 1 to start at the first op of the timestamp. Another thing that can be done is dial back the timestamp for eaxtra padding:
+#Note: the optime is formed as seconds from the epoch, in this case 1411574919, then a colon and the op number we would like to start with for this time. I alwasy set this to 1 to start at the first op of the timestamp. Another thing that can be done is dial back the timestamp for extra padding:
 #Example: 
-    #For an hour, subtract 3600 from the timestance, 1411574919 - 3600 = 1411571319
+    #For an hour, subtract 3600 from the timestamp, 1411574919 - 3600 = 1411571319
     #For one day, subtract 86400 from the timetamp, 1411574919 - 86400 = 1411488519
-#Becautious when doing this, if you are limiting the oplog size (or even if you are not) be cognisant of how long your oplog is (in hours/minutes/seconds) before dialing back the optime to an earlier time.
+#Be cautious when doing this, if you are limiting the oplog size (or even if you are not) be cognisant of how long your oplog is (in hours/minutes/seconds) before dialing back the optime to an earlier time.
 
 #Here is the command
 
